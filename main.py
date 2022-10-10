@@ -1,11 +1,7 @@
-
-
-
-import numpy as np
-# import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import pandas as pd
-import os
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import plotly
 import plotly.graph_objs as go
 import plotly.express as px
@@ -13,116 +9,57 @@ from plotly.subplots import make_subplots
 
 
 
-
-n = 1000
-x = np.linspace(0, 1, n)
-z = 20 * np.sin(2 * np.pi * 3 * x) + 100 * np.exp(x)
-error = 10 * np.random.randn(n)
-t = z + error
-
-
-
-
-def fourier(M, x):
-    arr = []
-    for i in range(n):
-        arr1 = []
-        for j in range(0, M + 1):
-            if j == 0:
-                arr1.append(1)
-            elif j % 2 != 0:
-                arr1.append(np.sin((j // 2 + 1) * x[i]))
-            else:
-                arr1.append(np.cos(j // 2 * x[i]))
-        arr.append(arr1)
-
-    return np.array(arr)
-
-
-
-def W1(M, x, t):
-    arr = fourier(M, x)
-    return np.linalg.inv(arr.T @ arr) @ arr.T @ t
+np.random.seed(11)
+height_fut =np.random.randn(500) * 20 + 160
+height_fut =np.array(height_fut)
+height_bas =np.random.randn(500) * 10 + 190
+height_bas =np.array(height_bas)
 
 
 
 
-def Y1(M, x, t):
-    w = W1(M, x, t)
-    arr = fourier(M, x)
-    y = arr @ w.T
-    return y
+arr_precision =[]
+arr_recall =[]
+arr_acc =[]
 
 
 
 
-def pol(M, x):
-    arr = []
-    for i in range(0, 1000):
-        arr1 = []
-        for j in range(0, M + 1):
-            arr1.append(x[i] ** j)
-        arr.append(arr1)
-
-    return np.array(arr)
-
-
-
-def W(M, x, t):
-    arr = pol(M, x)
-    return np.linalg.inv(arr.T @ arr) @ arr.T @ t
-
-
-
-def Y(M, x, t):
-    w = W(M, x, t)
-    arr = pol(M, x)
-    y = w @ arr.T
-    return y
+for height in range(0 ,231):
+    TP =0 # баскетбол
+    TN =0 # футбол
+    FP =0 # футболисты которых записали в баскетбол
+    FN =0 # баскетбол которых записали в футбол
+    TP = np.sum(height_bas >height)
+    FN = len(height_bas) - TP
+    TN = np.sum(height_fut <height)
+    FP = len(height_fut) - TN
+    if TP +FP==0:
+        break
+    else:
+        arr_precision.append(TP /(TP +FP))
+        arr_recall.append(TP /(TP +FN))
+        arr_acc.append((TP +TN) /(TP +TN +FP+FN))
 
 
 
+fig = px.scatter(x=arr_recall, y=arr_precision,
+                 hover_data={"accuracy" :arr_acc,
+                             "threshold" :range(0 ,len(arr_precision))},
+
+                 )
+fig.update_traces(mode="lines")
+fig.show()
 
 
-def plot_1(x, z, t, M):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=x, y=z, line={'width': 5}, name='z=20 * np.sin(2 * np.pi * 3 * x) + 100 * np.exp(x)'))
-    fig.add_trace(go.Scatter(x=x, y=t, mode='markers', opacity=0.8, name='t=z + error'))
-    fig.add_trace(go.Scatter(x=x, y=Y(M, x, t), line={'width': 5}, name='y'))
-
-    fig.show()
+np.trapz(arr_precision ,arr_recall) * -1 # так как arr_recall сортирован в обратном порядке(уменьшается),
+# по этой причине нам необходимо взять значение площади с обратным знаком
 
 
-
-
-
-plot_1(x, z, t, 1)
-
-
-
-plot_1(x, z, t, 8)
-
-
-
-plot_1(x, z, t, 100)
-
-
-
-
-
-def plot_2(x, z, t, M):
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=x, y=z, line={'width': 5}, name='z=20 * np.sin(2 * np.pi * 3 * x) + 100 * np.exp(x)'))
-    fig.add_trace(go.Scatter(x=x, y=t, mode='markers', opacity=0.8, name='t=z + error'))
-    fig.add_trace(go.Scatter(x=x, y=Y1(M, x, t), line={'width': 5}, name='y'))
-    fig.show()
-
-
-plot_2(x, z, t, 1)
-
-
-plot_2(x, z, t, 7)
-
-
-plot_2(x, z, t, 10)
+# Альтернативный способ нахождения площади
+S= 0
+for i in range(0, len(arr_precision) - 1):
+    h = arr_recall[i + 1] - arr_recall[i]
+    S += np.absolute(h) * (arr_precision[i] + arr_precision[i + 1]) / 2
+S
 
